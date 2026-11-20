@@ -25,7 +25,7 @@ class Lieu
     private ?int $id = null;
 
     /** Clé naturelle : jamais écrite par l'API, cachée. */
-    #[ORM\Column(unique: true)]
+    #[ORM\Column(nullable: true, unique: true)]
     private ?int $rickMortyId = null;
 
     #[ORM\Column(length: 255)]

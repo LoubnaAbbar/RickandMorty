@@ -26,7 +26,7 @@ class Personnage
     private ?int $id = null;
 
     /** Clé naturelle : sert à ne pas importer deux fois. Jamais écrite par l'API, cachée. */
-    #[ORM\Column(unique: true)]
+    #[ORM\Column(nullable: true, unique: true)]
     private ?int $rickMortyId = null;
 
     #[ORM\Column(length: 255)]
