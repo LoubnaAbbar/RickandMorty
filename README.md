@@ -157,7 +157,7 @@ Une fois le serveur lancé, les routes suivantes sont disponibles (et testables 
 
 Dans le cadre de ce projet, des outils d'Intelligence Artificielle générative ont été utilisés comme assistants au développement, sous supervision et relecture systématique de l'équipe :
 
-* **Outils utilisés :** ChatGPT / Claude / Gemini (et autocomplétion IDE).
+* **Outils utilisés :** Claude et Gemini.
 * **Parties concernées :**
   1. **Aide à la structuration de la commande ETL (`ImportPersonnagesCommand.php`) :** Génération du squelette de la boucle d'import, gestion de la pagination de l'API externe et mise en place des tableaux de cache mémoire avant le `flush()`.
   2. **Débogage Doctrine & API Platform :** Résolution des erreurs de sérialisation circulaire (`#[Groups]`) et ajustement des contraintes de validation (`#[Assert]`).
