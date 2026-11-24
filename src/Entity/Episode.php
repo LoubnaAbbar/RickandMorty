@@ -23,7 +23,7 @@ class Episode
     private ?int $id = null;
 
     /** Clé naturelle : jamais écrite par l'API. Lisible seulement sur /episodes. */
-    #[ORM\Column(unique: true)]
+    #[ORM\Column(nullable: true, unique: true)]
     #[Groups(['episode:lire'])]
     private ?int $rickMortyId = null;
 
