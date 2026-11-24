@@ -1,0 +1,51 @@
+# Guide de finalisation pour `docs/mapping.xlsx`
+
+Ton fichier Excel actuel (`mapping-architecture-donnees-rick-and-morty (2).xlsx`) contient déjà une base de travail. Assure-toi qu'il soit bien enregistré sous le chemin exact **`docs/mapping.xlsx`** dans ton dépôt Git et qu'il comporte **trois onglets propres** correspondant exactement au code de votre projet :
+
+---
+
+## Onglet 1 : `Mapping_API_BDD` (Correspondance exacte API $\rightarrow$ Base)
+
+Copie-colle ce tableau dans le premier onglet de ton fichier Excel :
+
+| Endpoint Source | Chemin JSON API | Type JSON | Exemple de valeur | Entité Symfony | Propriété PHP | Table SQL | Colonne SQL | Type SQL | Clé / Contrainte | Règle de transformation |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `/api/character` | `id` | `integer` | `1` | `Personnage` | `apiId` | `personnage` | `api_id` | `INTEGER` | `UNIQUE NOT NULL` | Clé naturelle utilisée pour vérifier si le personnage existe déjà |
+| `/api/character` | `name` | `string` | `"Rick Sanchez"` | `Personnage` | `nom` | `personnage` | `nom` | `VARCHAR(255)` | `NOT NULL` | Copie directe, validation `NotBlank` |
+| `/api/character` | `status` | `string` | `"Alive"` | `Personnage` | `statut` | `personnage` | `statut` | `VARCHAR(50)` | `NOT NULL` | Copie directe (`Alive`, `Dead`, `unknown`) |
+| `/api/character` | `species` | `string` | `"Human"` | `Espece` | `nom` | `espece` | `nom` | `VARCHAR(100)` | `UNIQUE NOT NULL` | Recherche en cache/BDD par nom, création si absente, liée via `personnage.espece_id` |
+| `/api/character` | `type` | `string` | `""` ou `"Genetic experiment"` | `Personnage` | `type` | `personnage` | `type` | `VARCHAR(255)` | `NULLABLE` | Conversion d'une chaîne vide `""` en `null` |
+| `/api/character` | `gender` | `string` | `"Male"` | `Personnage` | `genre` | `personnage` | `genre` | `VARCHAR(50)` | `NOT NULL` | Copie directe (`Male`, `Female`, `Genderless`, `unknown`) |
+| `/api/character` | `origin.name` | `string` | `"Earth (C-137)"` | `Lieu` | `nom` | `lieu` | `nom` | `VARCHAR(255)` | `NOT NULL` | Si `origin.url` est vide (`unknown`), ignoré (`origine_id = null`) |
+| `/api/character` | `origin.url` | `string` | `".../location/1"` | `Lieu` | `apiId` | `lieu` | `api_id` | `INTEGER` | `UNIQUE NOT NULL` | Extraction de l'ID numérique à la fin de l'URL + appel `/api/location/{id}` pour récupérer `type` et `dimension` |
+| `/api/character` | `location.name` | `string` | `"Citadel of Ricks"` | `Lieu` | `nom` | `lieu` | `nom` | `VARCHAR(255)` | `NOT NULL` | Si `location.url` est vide (`unknown`), ignoré (`localisation_id = null`) |
+| `/api/character` | `location.url` | `string` | `".../location/3"` | `Lieu` | `apiId` | `lieu` | `api_id` | `INTEGER` | `UNIQUE NOT NULL` | Extraction de l'ID numérique à la fin de l'URL, lié via `personnage.localisation_id` |
+| `/api/character` | `image` | `string` | `"https://.../1.jpeg"` | `Personnage` | `image` | `personnage` | `image` | `VARCHAR(255)` | `NULLABLE` | Copie directe de l'URL de l'image |
+| `/api/character` | `episode[]` | `array<string>` | `[".../episode/1"]` | `Episode` | `apiId` | `episode` | `api_id` | `INTEGER` | `UNIQUE NOT NULL` | Boucle sur chaque URL : extraction de l'ID, récupération des détails (`name`, `episode`, `air_date`) et liaison `ManyToMany` (`personnage_episode`) |
+| `/api/location/{id}` | `type` | `string` | `"Planet"` | `Lieu` | `type` | `lieu` | `type` | `VARCHAR(100)` | `NULLABLE` | Récupéré lors de la résolution du lieu |
+| `/api/location/{id}` | `dimension` | `string` | `"Dimension C-137"` | `Lieu` | `dimension` | `lieu` | `dimension` | `VARCHAR(100)` | `NULLABLE` | Récupéré lors de la résolution du lieu |
+| `/api/episode/{id}` | `name` | `string` | `"Pilot"` | `Episode` | `nom` | `episode` | `nom` | `VARCHAR(255)` | `NOT NULL` | Titre de l'épisode |
+| `/api/episode/{id}` | `episode` | `string` | `"S01E01"` | `Episode` | `code` | `episode` | `code` | `VARCHAR(20)` | `NOT NULL` | Code saison/épisode |
+| `/api/episode/{id}` | `air_date` | `string` | `"December 2, 2013"` | `Episode` | `dateDiffusion` | `episode` | `date_diffusion` | `VARCHAR(100)` | `NULLABLE` | Date de diffusion originale |
+
+---
+
+## Onglet 2 : `Champs_Ignores` (Justification des exclusions)
+
+| Champ JSON API | Ressource source | Raison de l'exclusion |
+| :--- | :--- | :--- |
+| `url` | `character`, `location`, `episode` | URL technique de l'API externe ; notre API génère ses propres IRI (`/api/personnages/{id}`). |
+| `created` | `character`, `location`, `episode` | Date technique de création de la fiche dans la base externe, sans intérêt métier pour notre plateforme. |
+| `residents[]` | `location` | Redondant : la relation est déjà gérée via les clés étrangères `origine_id` et `localisation_id` sur `Personnage`. |
+| `characters[]` | `episode` | Redondant : la relation `ManyToMany` est alimentée depuis la liste `episode[]` de chaque personnage. |
+
+---
+
+## Onglet 3 : `Relations_Doctrine` (Vérification du modèle)
+
+| Entité Source | Entité Cible | Type Doctrine | Côté Propriétaire | Clé étrangère / Table de jointure | Nullable |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `Personnage` | `Espece` | `ManyToOne` | `Personnage::$espece` | `personnage.espece_id` | Non |
+| `Personnage` | `Lieu` | `ManyToOne` | `Personnage::$origine` | `personnage.origine_id` | Oui |
+| `Personnage` | `Lieu` | `ManyToOne` | `Personnage::$localisation` | `personnage.localisation_id` | Oui |
+| `Personnage` | `Episode` | `ManyToMany` | `Personnage::$episodes` | Table `personnage_episode` (`personnage_id`, `episode_id`) | Oui |
